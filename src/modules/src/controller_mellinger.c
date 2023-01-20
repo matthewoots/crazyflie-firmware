@@ -162,6 +162,26 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
     target_thrust.x = self->mass * setpoint->acceleration.x                       + self->kp_xy * r_error.x + self->kd_xy * v_error.x + self->ki_xy * self->i_error_x;
     target_thrust.y = self->mass * setpoint->acceleration.y                       + self->kp_xy * r_error.y + self->kd_xy * v_error.y + self->ki_xy * self->i_error_y;
     target_thrust.z = self->mass * (setpoint->acceleration.z + GRAVITY_MAGNITUDE) + self->kp_z  * r_error.z + self->kd_z  * v_error.z + self->ki_z  * self->i_error_z;
+  } else if (setpoint->mode.x == modeVelocity) {
+    // Follow velocityController from position_controller_pid.c
+    float cosyaw = cosf(state->attitude.yaw * (float)M_PI / 180.0f);
+    float sinyaw = sinf(state->attitude.yaw * (float)M_PI / 180.0f);
+    float desired_vx = setpoint->velocity.x * cosyaw + setpoint->velocity.y * sinyaw;
+    float desired_vy = -setpoint->velocity.x * sinyaw + setpoint->velocity.y * cosyaw;
+    float state_body_vx = state->velocity.x * cosyaw + state->velocity.y * sinyaw;
+    float state_body_vy = -state->velocity.x * sinyaw + state->velocity.y * cosyaw;
+    // Proportional
+    float pitch = -(desired_vx - state_body_vx);
+    float roll = -(desired_vy - state_body_vy);
+    target_thrust.x = -sinf(radians(pitch));
+    target_thrust.y = -sinf(radians(roll));
+    if (setpoint->mode.z == modeAbs)  
+      target_thrust.z = self->mass * GRAVITY_MAGNITUDE + self->kp_z  * r_error.z + self->kd_z * v_error.z + self->ki_z  * self->i_error_z;
+    else
+    {
+      target_thrust.z = self->mass * GRAVITY_MAGNITUDE + self->kd_z * v_error.z;
+    }
+
   } else {
     target_thrust.x = -sinf(radians(setpoint->attitude.pitch));
     target_thrust.y = -sinf(radians(setpoint->attitude.roll));

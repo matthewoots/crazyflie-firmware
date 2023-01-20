@@ -93,7 +93,8 @@ struct velocityPacket_s {
   float vx;        // m in the world frame of reference
   float vy;        // ...
   float vz;        // ...
-  float yawrate;  // deg/s
+  float height;    // ...
+  float yaw;  // deg
 } __attribute__((packed));
 static void velocityDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
 {
@@ -103,15 +104,17 @@ static void velocityDecoder(setpoint_t *setpoint, uint8_t type, const void *data
 
   setpoint->mode.x = modeVelocity;
   setpoint->mode.y = modeVelocity;
-  setpoint->mode.z = modeVelocity;
+  setpoint->mode.z = modeAbs;
 
   setpoint->velocity.x = values->vx;
   setpoint->velocity.y = values->vy;
   setpoint->velocity.z = values->vz;
 
-  setpoint->mode.yaw = modeVelocity;
+  setpoint->position.z = values->height;
 
-  setpoint->attitudeRate.yaw = -values->yawrate;
+  setpoint->mode.yaw = modeAbs;
+
+  setpoint->attitude.yaw = values->yaw;
 }
 
 /* zDistanceDecoder
