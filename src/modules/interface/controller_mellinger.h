@@ -65,6 +65,9 @@ typedef struct {
     float i_error_y;
     float i_error_z;
 
+    float prev_velocity_error_x;
+    float prev_velocity_error_y;
+
     float prev_omega_roll;
     float prev_omega_pitch;
     float prev_setpoint_omega_roll;
@@ -73,6 +76,8 @@ typedef struct {
     float i_error_m_x;
     float i_error_m_y;
     float i_error_m_z;
+
+    float v_comp;
 
     // Logging variables
     struct vec z_axis_desired;

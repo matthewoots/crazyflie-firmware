@@ -86,6 +86,9 @@ static controllerMellinger_t g_self = {
   .i_error_m_x = 0,
   .i_error_m_y = 0,
   .i_error_m_z = 0,
+
+  .v_comp = 5.0,
+
 };
 
 
@@ -170,9 +173,22 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
     float desired_vy = -setpoint->velocity.x * sinyaw + setpoint->velocity.y * cosyaw;
     float state_body_vx = state->velocity.x * cosyaw + state->velocity.y * sinyaw;
     float state_body_vy = -state->velocity.x * sinyaw + state->velocity.y * cosyaw;
-    // Proportional
-    float pitch = -(desired_vx - state_body_vx);
-    float roll = -(desired_vy - state_body_vy);
+    
+    float error_vx = (desired_vx - state_body_vx);
+    float error_vy = (desired_vy - state_body_vy);
+
+    float error_dvx = (error_vx - self->prev_velocity_error_x) / dt;
+    float error_dvy = (error_vy - self->prev_velocity_error_y) / dt;
+
+    self->prev_velocity_error_x = error_vx;
+    self->prev_velocity_error_y = error_vy;
+
+    float p_v_comp = self->kp_xy * self->v_comp;
+    float d_v_comp = self->kd_xy * self->v_comp;
+    float i_v_comp = self->ki_xy;
+
+    float pitch = -(p_v_comp * error_vx + d_v_comp * error_dvx + i_v_comp * error_vx * dt);
+    float roll = -(p_v_comp * error_vy + d_v_comp * error_dvy + i_v_comp * error_vy * dt);
     target_thrust.x = -sinf(radians(pitch));
     target_thrust.y = -sinf(radians(roll));
     if (setpoint->mode.z == modeAbs)  

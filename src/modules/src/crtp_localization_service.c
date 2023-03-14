@@ -104,6 +104,8 @@ typedef struct {
   int16_t y; // mm
   int16_t z; // mm
   uint32_t quat; // compressed quaternion, see quatcompress.h
+  uint16_t sd_p; // *10^4
+  uint16_t sd_q; // *10^4
 } __attribute__((packed)) extPosePackedItem;
 
 // Struct for logging position information
@@ -208,8 +210,10 @@ static void extPosePackedHandler(const CRTPPacket* pk) {
       ext_pose.y = item->y / 1000.0f;
       ext_pose.z = item->z / 1000.0f;
       quatdecompress(item->quat, (float *)&ext_pose.quat.q0);
-      ext_pose.stdDevPos = extPosStdDev;
-      ext_pose.stdDevQuat = extQuatStdDev;
+      // ext_pose.stdDevPos = extPosStdDev;
+      // ext_pose.stdDevQuat = extQuatStdDev;
+      ext_pose.stdDevPos = (item->sd_p / 10000.0f) * extPosStdDev;
+      ext_pose.stdDevQuat = (item->sd_q / 10000.0f) * extQuatStdDev;
       estimatorEnqueuePose(&ext_pose);
       tickOfLastPacket = xTaskGetTickCount();
     } else {
