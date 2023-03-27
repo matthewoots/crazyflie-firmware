@@ -146,6 +146,15 @@ static uint32_t gyroAccumulatorCount;
 static Axis3f accLatest;
 static Axis3f gyroLatest;
 static bool quadIsFlying = false;
+static float heightThreshold = 1.0f;
+static float reboundThreshold = 0.0f;
+static uint32_t heightLeniency = 3;
+uint32_t leniency_counter = 0;
+float abnormality = 0.0f;
+float previousHeight = 0.0f;
+bool in_abnormally = false;
+bool tofFuse = true;
+bool in_leniency = false;
 
 static OutlierFilterLhState_t sweepOutlierFilterState;
 
@@ -382,7 +391,61 @@ static bool updateQueuedMeasurements(const uint32_t tick) {
         doneUpdate = true;
         break;
       case MeasurementTypeTOF:
-        kalmanCoreUpdateWithTof(&coreData, &m.data.tof);
+        // DEBUG_PRINT("(%f/%f) %f\n", 
+        //   (double)previousHeight, (double)((&m.data.tof)->distance),
+        //   (double)fabsf(previousHeight - (&m.data.tof)->distance));
+
+        // check whether it is a new abnormality
+        if(!in_abnormally)
+        {
+          if (in_leniency)
+          {
+            if (leniency_counter < heightLeniency)
+            {
+              leniency_counter++;
+              if (fabsf(previousHeight - (&m.data.tof)->distance) > reboundThreshold)
+              {
+                in_abnormally = true;
+                tofFuse = false;
+                abnormality = (&m.data.tof)->distance;
+                leniency_counter = 0;
+                in_leniency = false;
+              }
+            }
+            else
+            {
+              leniency_counter = 0;
+              in_leniency = false;
+            }
+          }
+          else
+            if (fabsf(previousHeight - (&m.data.tof)->distance) > heightThreshold)
+            {
+              in_abnormally = true;
+              tofFuse = false;
+              abnormality = (&m.data.tof)->distance;
+              leniency_counter = 0;
+            }
+        }
+        else
+        {
+          if (fabsf(abnormality - (&m.data.tof)->distance) > heightThreshold)
+          {
+            in_abnormally = false;
+            if (fabsf(previousHeight - (&m.data.tof)->distance) < reboundThreshold)
+            {
+              tofFuse = true;
+              in_leniency = true;
+            }
+          }
+        }
+
+        if (tofFuse)
+        {
+          kalmanCoreUpdateWithTof(&coreData, &m.data.tof);
+          previousHeight = (&m.data.tof)->distance;
+        }
+
         doneUpdate = true;
         break;
       case MeasurementTypeAbsoluteHeight:
@@ -599,6 +662,18 @@ PARAM_GROUP_START(kalman)
  * @brief Nonzero to use robust TDOA method (default: 0)
  */
   PARAM_ADD_CORE(PARAM_UINT8, robustTdoa, &robustTdoa)
+/**
+ * @brief heightThreshold for abnormal tolerance (default: 1.0)
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, heightThreshold, &heightThreshold)
+/**
+ * @brief reboundThreshold for abnormal tolerance (default: 0.0)
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, reboundThreshold, &reboundThreshold)
+/**
+ * @brief heightLeniency for abnormal tolerance (default: 3)
+ */
+  PARAM_ADD_CORE(PARAM_UINT8, heightLeniency, &heightLeniency)
 /**
  * @brief Nonzero to use robust TWR method (default: 0)
  */

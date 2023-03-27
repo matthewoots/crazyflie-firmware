@@ -38,6 +38,7 @@ void kalmanCoreUpdateWithDistance(kalmanCoreData_t* this, distanceMeasurement_t*
   float measuredDistance = d->distance;
 
   float predictedDistance = arm_sqrt(powf(dx, 2) + powf(dy, 2) + powf(dz, 2));
+  
   if (predictedDistance != 0.0f) {
     // The measurement is: z = sqrt(dx^2 + dy^2 + dz^2). The derivative dz/dX gives h.
     h[KC_STATE_X] = dx/predictedDistance;
